@@ -1,0 +1,68 @@
+#!/usr/bin/expect -f
+
+# Set timeout to -1 to wait indefinitely for responses
+set timeout -1
+
+# Function to simulate human typing
+proc type_command {cmd} {
+    foreach c [split $cmd ""] {
+        send -- "$c"
+        # Delay between keystrokes to simulate human typing
+        sleep 0.02
+        expect -re "."
+    }
+    sleep 1  ;# Delay to allow the viewer to grasp the typed command
+    send "\r"
+    expect -re "."
+}
+
+# Start a bash shell
+spawn bash
+
+# Step 1: Initialize a New Project
+expect "$ "
+type_command "idf.py create-project-from-example \"espressif/esp-box-3^1.2.0:display_audio_photo\""
+
+# Wait for the project creation to complete
+expect "$ "
+type_command "cd display_audio_photo"
+
+# Step 2: Set the Target
+expect "$ "
+type_command "idf.py set-target esp32s3"
+
+# Wait for the target to be set
+expect "$ "
+type_command "idf.py add-dependency \"espressif/esp_codec_dev==1.1.0\""
+
+# Step 3: Build the Project
+expect "$ "
+type_command "idf.py build"
+
+# Wait for the specific pattern indicating build completion
+expect {
+    -re "after hard_reset write_flash \"@flash_args\"" { exp_continue }
+    "$ "
+}
+
+# Step 4: Flash the Project
+type_command "idf.py flash"
+expect "$ "
+
+# Step 5: Monitor the Project
+type_command "idf.py monitor"
+expect "$ "
+
+# Wait for a few seconds to simulate user observation
+sleep 5
+
+# Simulate Ctrl+] to quit monitor
+send "\035"
+expect -re ".*"
+
+# Exit the shell
+expect "$ "
+type_command "exit"
+
+# End of the script
+expect eof
