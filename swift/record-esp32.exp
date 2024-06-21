@@ -1,0 +1,63 @@
+#!/usr/bin/expect -f
+
+# Set timeout to -1 to wait indefinitely for responses
+set timeout -1
+
+# Function to simulate human typing
+proc type_command {cmd} {
+    foreach c [split $cmd ""] {
+        send -- "$c"
+        # Delay between keystrokes to simulate human typing
+        sleep 0.02
+        expect -re "."
+    }
+    sleep 1  ;# Delay to allow the viewer to grasp the typed command
+    send "\r"
+    expect -re "."
+}
+
+# Start a bash shell
+spawn bash
+
+expect "$ "
+type_command "git clone git@github.com:apple/swift-embedded-examples.git --single-branch --branch main"
+
+expect "$ "
+type_command "export TOOLCHAINS=org.swift.600202406111a"
+
+expect "$ "
+type_command "cd swift-embedded-examples/esp32-led-strip-sdk"
+
+expect "$ "
+type_command "idf.py set-target esp32c6"
+
+expect "$ "
+type_command "idf.py build"
+
+# Wait for the specific pattern indicating build completion
+expect {
+    -re "after hard_reset write_flash \"@flash_args\"" { exp_continue }
+    "$ "
+}
+
+# Step 4: Flash the Project
+type_command "idf.py flash"
+expect "$ "
+
+# Step 5: Monitor the Project
+type_command "idf.py monitor"
+expect "$ "
+
+# Wait for a few seconds to simulate user observation
+sleep 5
+
+# Simulate Ctrl+] to quit monitor
+send "\035"
+expect -re ".*"
+
+# Exit the shell
+expect "$ "
+type_command "exit"
+
+# End of the script
+expect eof

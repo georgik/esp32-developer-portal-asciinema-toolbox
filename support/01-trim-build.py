@@ -5,11 +5,11 @@ def process_asciinema_recording(input_file, output_file):
         # Read and parse the JSON metadata header
         header = json.loads(f.readline())
         events = []
-        
+
         # Read the remaining lines (events)
         for line in f:
             events.append(json.loads(line))
-    
+
     filtered_events = []
     build_counter = 0
     accumulated_time = 0
@@ -28,7 +28,7 @@ def process_asciinema_recording(input_file, output_file):
             continue
 
         # Detect build lines based on the pattern
-        if "/989]" in content:
+        if "/1015]" in content:
             build_counter += 1
             if build_counter % 100 != 0:
                 continue
