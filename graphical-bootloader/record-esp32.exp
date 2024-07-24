@@ -1,0 +1,64 @@
+#!/usr/bin/expect -f
+
+# Set timeout to -1 to wait indefinitely for responses
+set timeout -1
+
+# Function to simulate human typing
+proc type_command {cmd} {
+    foreach c [split $cmd ""] {
+        send -- "$c"
+        # Delay between keystrokes to simulate human typing
+        sleep 0.02
+        expect -re "."
+    }
+    sleep 1  ;# Delay to allow the viewer to grasp the typed command
+    send "\r"
+    expect -re "."
+}
+
+# Start a bash shell
+spawn bash
+
+expect "$ "
+type_command "git clone https://github.com/georgik/esp32-graphical-bootloader.git"
+
+expect "$ "
+type_command "cd esp32-graphical-bootloader/apps"
+
+expect "$ "
+type_command "idf.py create-project hello_app"
+
+expect "$ "
+type_command "cd hello_app"
+
+expect "$ "
+type_command "idf.py set-target esp32s3"
+
+expect "$ "
+type_command "idf.py add-dependency \"espressif/esp-box-3^1.2.0\""
+
+expect "$ "
+type_command "idf.py add-dependency \"espressif/esp_codec_dev==1.1.0\""
+
+expect "$ "
+type_command "# Update main/hello_app.c with reset_to_factory_app() function"
+
+expect "$ "
+type_command "idf.py @../../boards/esp-box-3.cfg build"
+
+# Wait for the specific pattern indicating build completion
+expect {
+    -re "after hard_reset write_flash \"@flash_args\"" { exp_continue }
+    "$ "
+}
+
+# Step 4: Flash the Project
+type_command "esptool.py --chip esp32s3 write_flash 0x220000 build.esp-box-3/hello_app.bin"
+expect "$ "
+
+# Exit the shell
+expect "$ "
+type_command "exit"
+
+# End of the script
+expect eof
