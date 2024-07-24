@@ -7,11 +7,20 @@ set timeout -1
 proc type_command {cmd} {
     foreach c [split $cmd ""] {
         send -- "$c"
-        # Delay between keystrokes to simulate human typing
         sleep 0.02
         expect -re "."
     }
     sleep 1  ;# Delay to allow the viewer to grasp the typed command
+    send "\r"
+    expect -re "."
+}
+
+# Function to simulate human typing for file content
+proc type_file_content {content} {
+    foreach line [split $content "\n"] {
+        send -- "$line\n"
+        sleep 0.02  ;# Delay between lines
+    }
     send "\r"
     expect -re "."
 }
@@ -35,13 +44,71 @@ expect "$ "
 type_command "idf.py set-target esp32s3"
 
 expect "$ "
+type_command "cp ../calculator/sdkconfig.defaults ."
+
+expect "$ "
+type_command "cp ../calculator/sdkconfig.defaults.esp-box-3 ."
+
+expect "$ "
 type_command "idf.py add-dependency \"espressif/esp-box-3^1.2.0\""
 
 expect "$ "
 type_command "idf.py add-dependency \"espressif/esp_codec_dev==1.1.0\""
 
+# Content of the main/hello_app.c file
+set file_content {
+#include <stdio.h>
+#include \"freertos/FreeRTOS.h\"
+#include \"freertos/task.h\"
+#include \"esp_log.h\"
+#include \"lvgl.h\"
+#include \"bsp/esp-bsp.h\"
+#include \"esp_ota_ops.h\"
+
+void reset_to_factory_app() {
+    // Get the partition structure for the factory partition
+    const esp_partition_t *factory_partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_FACTORY, NULL);
+    if (factory_partition != NULL) {
+        if (esp_ota_set_boot_partition(factory_partition) == ESP_OK) {
+            printf(\"Set boot partition to factory, restarting now.\\n\");
+        } else {
+            printf(\"Failed to set boot partition to factory.\\n\");
+        }
+    } else {
+        printf(\"Factory partition not found.\\n\");
+    }
+
+    fflush(stdout);
+}
+
+void app_main(void) {
+    reset_to_factory_app();
+
+    // Initialize the BSP
+    bsp_i2c_init();
+    bsp_display_start();
+
+    // Create a label and set its text
+    lv_obj_t *label = lv_label_create(lv_scr_act());
+    lv_label_set_text(label, \"Hello ESP32-S3-BOX-3\");
+    lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+
+    // Start the display backlight
+    bsp_display_backlight_on();
+
+    printf(\"Hello ESP32-S3-BOX-3\\n\");
+
+    // Handle LVGL tasks
+    while (1) {
+        lv_task_handler();
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
+}
+
+# Write the content to main/hello_app.c
 expect "$ "
-type_command "# Update main/hello_app.c with reset_to_factory_app() function"
+type_file_content "echo \"${file_content}\" > main/hello_app.c"
 
 expect "$ "
 type_command "idf.py @../../boards/esp-box-3.cfg build"
